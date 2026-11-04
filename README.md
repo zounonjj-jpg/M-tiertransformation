@@ -26,4 +26,4 @@ Never put a Supabase service-role key in browser code or a public environment va
 - Business profile intake form
 - Row Level Security for user-owned records
 
-The AI business analysis, project generation, CRM, billing and admin console are planned next stages and are not yet enabled.
+## Current modules\n- Business diagnostic (guided rules-based recommendations; no external LLM connected yet)\n- Offer builder with editable pricing tiers\n- Private prospect and client CRM\n- Digital Factory project blueprints for websites, catalogues, e-books, courses and mobile apps; saved to the user's private workspace\n\nThe Digital Factory currently creates structured project briefs and launch checklists. It does not yet generate finished websites, e-books, courses or apps automatically. Billing, subscription plans, automated outreach and the admin console remain future stages.
