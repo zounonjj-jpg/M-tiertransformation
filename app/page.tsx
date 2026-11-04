@@ -18,7 +18,7 @@ export default function Home() {
       <nav className={menuOpen ? "nav-links open" : "nav-links"}>
         <a href="#solution" onClick={() => setMenuOpen(false)}>La solution</a><a href="#fonctionnement" onClick={() => setMenuOpen(false)}>Comment ça marche</a><a href="#vision" onClick={() => setMenuOpen(false)}>Notre vision</a>
       </nav>
-      <a className="nav-cta" href="#demarrer">Commencer <span>↗</span></a>
+      <a className="nav-cta" href="/auth?mode=signup">Commencer <span>↗</span></a>
     </header>
 
     <section className="hero wrap">
@@ -26,7 +26,7 @@ export default function Home() {
         <div className="eyebrow"><span className="pulse" /> L’INTELLIGENCE QUI ENTREPREND AVEC VOUS</div>
         <h1>Votre talent mérite<br/>de devenir un <em>business.</em></h1>
         <p className="hero-lead">NEXBIZ AI transforme vos compétences, votre métier ou votre expérience en une activité numérique structurée, prête à se développer.</p>
-        <div className="hero-actions"><a className="button button-primary" href="#demarrer">Construire mon business <span>→</span></a><a className="text-link" href="#fonctionnement">Découvrir la méthode <span>↘</span></a></div>
+        <div className="hero-actions"><a className="button button-primary" href="/auth?mode=signup">Construire mon business <span>→</span></a><a className="text-link" href="#fonctionnement">Découvrir la méthode <span>↘</span></a></div>
         <div className="hero-proof"><div className="proof-avatars"><i>✦</i><i>✧</i><i>✺</i></div><span>Une idée, un métier, une ambition.<br/><b>Tout commence avec vous.</b></span></div>
       </div>
       <div className="hero-visual" aria-label="Aperçu du tableau de bord NEXBIZ AI">
@@ -55,7 +55,7 @@ export default function Home() {
 
     <section className="steps wrap" id="fonctionnement"><div className="eyebrow dark">SIMPLE. GUIDÉ. AMBITIEUX.</div><h2>Votre parcours commence<br/>par une <em>conversation.</em></h2><div className="steps-row"><div><b>01</b><h3>Parlez-nous de vous</h3><p>Votre métier, vos talents, vos objectifs.</p></div><div><b>02</b><h3>Recevez votre plan</h3><p>Une stratégie adaptée à votre situation.</p></div><div><b>03</b><h3>Passez à l’action</h3><p>Construisez et développez votre activité.</p></div></div></section>
 
-    <section className="final-cta" id="demarrer"><div className="wrap final-inner"><div><div className="eyebrow"><span className="pulse" /> LE PROCHAIN CHAPITRE VOUS APPARTIENT</div><h2>Et si votre métier<br/>devenait votre <em>prochain succès ?</em></h2></div><a className="button button-light" href="mailto:contact@nexbiz.ai?subject=Je%20veux%20d%C3%A9marrer%20avec%20NEXBIZ%20AI">Je veux me lancer <span>↗</span></a></div></section>
+    <section className="final-cta" id="demarrer"><div className="wrap final-inner"><div><div className="eyebrow"><span className="pulse" /> LE PROCHAIN CHAPITRE VOUS APPARTIENT</div><h2>Et si votre métier<br/>devenait votre <em>prochain succès ?</em></h2></div><a className="button button-light" href="/auth?mode=signup">Je veux me lancer <span>↗</span></a></div></section>
     <footer className="footer wrap"><a className="brand" href="#"><span className="brand-mark">N</span><span>NEXBIZ<span className="brand-ai"> AI</span></span></a><span>From Skills to Business.</span><span>© 2026 NEXBIZ AI. Tous droits réservés.</span></footer>
   </main>;
 }
