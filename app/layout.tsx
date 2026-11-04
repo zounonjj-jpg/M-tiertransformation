@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./auth/auth.css";
 
 export const metadata: Metadata = {
   title: "NEXBIZ AI — From Skills to Business",
