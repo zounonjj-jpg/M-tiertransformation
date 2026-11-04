@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
@@ -109,7 +109,7 @@ export default function OffersPage() {
     setError("");
   }
 
-  async function saveOffer(event: React.FormEvent<HTMLFormElement>) {
+  async function saveOffer(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setNotice(""); setError("");
     if (!supabase) return;
