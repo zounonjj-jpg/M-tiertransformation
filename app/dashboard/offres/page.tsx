@@ -161,7 +161,7 @@ export default function OffersPage() {
       <Link className="side-link" href="/dashboard">⌂ <span>Vue d'ensemble</span></Link>
       <Link className="side-link" href="/dashboard#profil">✳ <span>Mon profil métier</span></Link>
       <Link className="side-link" href="/dashboard/analyse">⌕ <span>Mon diagnostic</span></Link>
-      <Link className="side-link selected" href="/dashboard/offres">◇ <span>Mes offres</span></Link>
+      <Link className="side-link selected" href="/dashboard/offres">◇ <span>Mes offres</span></Link><Link className="side-link" href="/dashboard/clients">◎ <span>Prospects & clients</span></Link>
     </aside>
     <section className="workspace-main">
       <div className="workspace-top"><div><span className="eyebrow dark">BUSINESS ARCHITECT · ÉTAPE 03</span><h1>Construisez votre offre <span>✦</span></h1><p>Transformez votre expertise en une proposition claire que vos clients peuvent comprendre.</p></div><Link className="account-pill" href="/dashboard">← Tableau de bord</Link></div>
