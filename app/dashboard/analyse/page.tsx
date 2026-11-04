@@ -130,7 +130,7 @@ export default function AnalysisPage() {
       <div className="side-label">VOTRE ESPACE</div>
       <Link className="side-link" href="/dashboard">⌂ <span>Vue d'ensemble</span></Link>
       <Link className="side-link" href="/dashboard#profil">✳ <span>Mon profil métier</span></Link>
-      <Link className="side-link selected" href="/dashboard/analyse">⌕ <span>Mon diagnostic</span></Link><Link className="side-link" href="/dashboard/offres">◇ <span>Mes offres</span></Link>
+      <Link className="side-link selected" href="/dashboard/analyse">⌕ <span>Mon diagnostic</span></Link><Link className="side-link" href="/dashboard/offres">◇ <span>Mes offres</span></Link><Link className="side-link" href="/dashboard/clients">◎ <span>Prospects & clients</span></Link>
     </aside>
     <section className="workspace-main">
       <div className="workspace-top"><div><span className="eyebrow dark">INTELLIGENCE MÉTIER · ÉTAPE 02</span><h1>Votre diagnostic business <span>✦</span></h1><p>Un premier plan structuré à partir de votre profil et de vos objectifs.</p></div><Link className="account-pill" href="/dashboard">← Retour au tableau de bord</Link></div>
