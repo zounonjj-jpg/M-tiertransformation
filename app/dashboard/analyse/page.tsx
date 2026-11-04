@@ -110,7 +110,7 @@ export default function AnalysisPage() {
     if (!supabase || !business) return;
     setGenerating(true);
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { router.replace("/auth"); return; }
+    if (!user) { setGenerating(false); router.replace("/auth"); return; }
     const diagnostic = buildDiagnostic(business);
     const { error: saveError } = await supabase.from("business_analyses").insert({
       user_id: user.id,
