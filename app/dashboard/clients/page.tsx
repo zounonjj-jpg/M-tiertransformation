@@ -131,7 +131,7 @@ export default function ClientsPage() {
       <Link className="side-link" href="/dashboard#profil">✳ <span>Mon profil métier</span></Link>
       <Link className="side-link" href="/dashboard/analyse">⌕ <span>Mon diagnostic</span></Link>
       <Link className="side-link" href="/dashboard/offres">◇ <span>Mes offres</span></Link>
-      <Link className="side-link selected" href="/dashboard/clients">◎ <span>Prospects & clients</span></Link>
+      <Link className="side-link selected" href="/dashboard/clients">◎ <span>Prospects & clients</span></Link><Link className="side-link" href="/dashboard/factory">✧ <span>Digital Factory</span></Link>
     </aside>
     <section className="workspace-main">
       <div className="workspace-top"><div><span className="eyebrow dark">MARKETING & SALES · ÉTAPE 04</span><h1>Votre suivi commercial <span>✦</span></h1><p>Centralisez vos contacts et gardez une trace de chaque opportunité.</p></div><Link className="account-pill" href="/dashboard">← Tableau de bord</Link></div>
