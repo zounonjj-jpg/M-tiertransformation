@@ -39,6 +39,49 @@ export default function FactoryProjectPage(){
   else{setProject({...project,status});setNotice("L'état du projet a été mis à jour.");}
   setSaving(false);
  }
+ function exportProject(){
+  if(!project)return;
+  const lines=[
+   `# ${project.title}`,
+   `Type : ${labels[project.project_type]??"Projet"}`,
+   `Créé le : ${new Date(project.created_at).toLocaleDateString("fr-FR")}`,
+   `Statut : ${statuses[project.status]}`,
+   "",
+   "## Public cible",
+   project.target_audience,
+   "",
+   "## Objectif",
+   project.goal,
+   "",
+   "## Positionnement",
+   blueprint.positioning??project.description??"À définir",
+   "",
+   "## Promesse à vérifier",
+   blueprint.promise??"À définir",
+   "",
+   "## Structure proposée",
+   ...(blueprint.sections??[]).flatMap((section,index)=>[
+    `### ${index+1}. ${section.title}`,
+    section.purpose,
+    ...(section.actions??[]).map(action=>`- ${action}`),
+    ""
+   ]),
+   "## Plan de lancement",
+   ...(blueprint.launch_steps??[]).map((step,index)=>`${index+1}. ${step}`),
+   "",
+   "## Checklist",
+   ...(blueprint.checklist??[]).map(item=>`- [ ] ${item}`),
+   "",
+   "---",
+   "Document préparé avec NEXBIZ AI. Vérifiez les informations et validez votre marché avant publication."
+  ];
+  const blob=new Blob([lines.join("\\n")],{type:"text/markdown;charset=utf-8"});
+  const url=URL.createObjectURL(blob);
+  const link=document.createElement("a");
+  link.href=url;
+  link.download=`${project.title.trim().replace(/[^a-z0-9-_]+/gi,"-").toLowerCase()||"projet"}-nexbiz.md`;
+  document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);
+ }
  async function removeProject(){
   if(!supabase||!project)return;
   if(!window.confirm("Supprimer définitivement ce dossier de projet ?"))return;
@@ -63,7 +106,7 @@ export default function FactoryProjectPage(){
     <h3>Plan de lancement</h3><ol className="factory-steps">{(blueprint.launch_steps??[]).map(step=><li key={step}>{step}</li>)}</ol>
     <h3>Checklist avant lancement</h3><ul className="factory-checklist">{(blueprint.checklist??[]).map(item=><li key={item}>{item}</li>)}</ul>
     {error&&<p className="form-alert error">{error}</p>}{notice&&<p className="form-alert success">{notice}</p>}
-    <div className="factory-detail-actions"><label>État du projet<select value={project.status} disabled={saving} onChange={event=>void changeStatus(event.target.value as Project["status"])}><option value="draft">Brouillon</option><option value="in_progress">En cours</option><option value="completed">Terminé</option><option value="archived">Archivé</option></select></label><button className="offer-delete" disabled={saving} onClick={()=>void removeProject()}>{saving?"Traitement…":"Supprimer le dossier"}</button></div>
+    <div className="factory-detail-actions"><button type="button" className="button button-secondary" onClick={exportProject}>Télécharger le cahier (.md)</button><label>État du projet<select value={project.status} disabled={saving} onChange={event=>void changeStatus(event.target.value as Project["status"])}><option value="draft">Brouillon</option><option value="in_progress">En cours</option><option value="completed">Terminé</option><option value="archived">Archivé</option></select></label><button className="offer-delete" disabled={saving} onClick={()=>void removeProject()}>{saving?"Traitement…":"Supprimer le dossier"}</button></div>
     <p className="offer-note">Ce cahier est une base de travail. Il ne remplace pas la validation du marché et ne constitue pas encore un produit numérique publié.</p>
    </section>
   </section>
