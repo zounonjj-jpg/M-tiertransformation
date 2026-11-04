@@ -171,7 +171,7 @@ export default function FactoryPage() {
         </section>
       </div>
       <section className="factory-saved"><div className="factory-saved-head"><div><span className="eyebrow dark">VOTRE BIBLIOTHÈQUE</span><h2>Mes projets enregistrés</h2></div><span>{projects.length} projet{projects.length>1?"s":""}</span></div>
-        {projects.length===0?<p className="offer-empty">Aucun projet enregistré pour le moment. Votre premier cahier de projet apparaîtra ici.</p>:<div className="factory-project-grid">{projects.map(project=><article className="factory-project" key={project.id}><span className="factory-project-type">{types.find(item=>item.value===project.project_type)?.label??"Projet"}</span><h3>{project.title}</h3><p>{project.target_audience}</p><small>{new Date(project.created_at).toLocaleDateString("fr-FR")} · Brouillon</small></article>)}</div>}
+        {projects.length===0?<p className="offer-empty">Aucun projet enregistré pour le moment. Votre premier cahier de projet apparaîtra ici.</p>:<div className="factory-project-grid">{projects.map(project=><Link className="factory-project" key={project.id} href={`/dashboard/factory/${project.id}`}><span className="factory-project-type">{types.find(item=>item.value===project.project_type)?.label??"Projet"}</span><h3>{project.title}</h3><p>{project.target_audience}</p><small>{new Date(project.created_at).toLocaleDateString("fr-FR")} · {project.status==="in_progress"?"En cours":project.status==="completed"?"Terminé":project.status==="archived"?"Archivé":"Brouillon"}</small><span className="factory-project-open">Ouvrir le dossier →</span></Link>)}</div>}
       </section>
       <p className="workspace-footer">NEXBIZ AI · Construire d'abord utile, puis développer.</p>
     </section>
