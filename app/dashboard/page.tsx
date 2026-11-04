@@ -55,7 +55,7 @@ export default function DashboardPage() {
     if (!supabase) return;
     setSaving(true);
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { router.replace("/auth"); return; }
+    if (!user) { setSaving(false); router.replace("/auth"); return; }
     const payload = {
       user_id: user.id, profession: profession.trim(),
       skills: skills.split(",").map(s=>s.trim()).filter(Boolean),
