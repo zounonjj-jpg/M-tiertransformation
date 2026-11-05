@@ -20,6 +20,10 @@ export default function FactoryProjectPage(){
  const [saving,setSaving]=useState(false);
  const [error,setError]=useState("");
  const [notice,setNotice]=useState("");
+ const [editing,setEditing]=useState(false);
+ const [editTitle,setEditTitle]=useState("");
+ const [editAudience,setEditAudience]=useState("");
+ const [editGoal,setEditGoal]=useState("");
  const load=useCallback(async()=>{
   if(!supabase){router.replace("/auth");return;}
   const {data:{user}}=await supabase.auth.getUser();
@@ -29,6 +33,18 @@ export default function FactoryProjectPage(){
   setProject(data as Project|null);setLoading(false);
  },[params.id,router]);
  useEffect(()=>{void load();},[load]);
+ function startEditing(){if(!project)return;setEditTitle(project.title);setEditAudience(project.target_audience);setEditGoal(project.goal);setEditing(true);setError("");setNotice("");}
+ async function saveProjectDetails(){
+  if(!supabase||!project)return;
+  if(!editTitle.trim()||!editAudience.trim()||!editGoal.trim()){setError("Le nom, le public cible et l’objectif sont obligatoires.");return;}
+  setSaving(true);setError("");setNotice("");
+  const {data:{user}}=await supabase.auth.getUser();
+  if(!user){setSaving(false);router.replace("/auth");return;}
+  const {error:updateError}=await supabase.from("business_projects").update({title:editTitle.trim(),target_audience:editAudience.trim(),goal:editGoal.trim(),updated_at:new Date().toISOString()}).eq("id",project.id).eq("user_id",user.id);
+  if(updateError)setError(updateError.message);
+  else{setProject({...project,title:editTitle.trim(),target_audience:editAudience.trim(),goal:editGoal.trim(),updated_at:new Date().toISOString()});setEditing(false);setNotice("Les informations du projet ont été enregistrées.");}
+  setSaving(false);
+ }
  async function changeStatus(status:Project["status"]){
   if(!supabase||!project)return;
   setSaving(true);setError("");setNotice("");
@@ -99,7 +115,8 @@ export default function FactoryProjectPage(){
   <aside className="sidebar"><Link className="brand" href="/"><span className="brand-mark">N</span><span>NEXBIZ<span className="brand-ai"> AI</span></span></Link><div className="side-label">VOTRE ESPACE</div><Link className="side-link" href="/dashboard">⌂ <span>Vue d'ensemble</span></Link><Link className="side-link" href="/dashboard/analyse">⌕ <span>Mon diagnostic</span></Link><Link className="side-link" href="/dashboard/offres">◇ <span>Mes offres</span></Link><Link className="side-link" href="/dashboard/clients">◎ <span>Prospects & clients</span></Link><Link className="side-link selected" href="/dashboard/factory">✧ <span>Digital Factory</span></Link></aside>
   <section className="workspace-main">
    <div className="workspace-top"><div><span className="eyebrow dark">DOSSIER DIGITAL FACTORY</span><h1>{project.title}</h1><p>{labels[project.project_type]??"Projet numérique"} · Créé le {new Date(project.created_at).toLocaleDateString("fr-FR")}</p></div><Link className="account-pill" href="/dashboard/factory">← Mes projets</Link></div>
-   <section className="factory-detail-card"><div className="factory-detail-head"><div><span className="factory-project-type">{labels[project.project_type]??"Projet"}</span><h2>Votre cahier de projet</h2></div><span className="factory-draft">{statuses[project.status]}</span></div>
+   <section className="factory-detail-card"><div className="factory-detail-head"><div><span className="factory-project-type">{labels[project.project_type]??"Projet"}</span><h2>Votre cahier de projet</h2></div><div className="factory-detail-head-actions"><span className="factory-draft">{statuses[project.status]}</span><button type="button" className="button button-secondary" onClick={startEditing}>Modifier les informations</button></div></div>
+    {editing&&<div className="factory-edit-form"><h3>Modifier le projet</h3><label>Nom du projet<input maxLength={140} value={editTitle} onChange={event=>setEditTitle(event.target.value)}/></label><label>Public cible<input maxLength={240} value={editAudience} onChange={event=>setEditAudience(event.target.value)}/></label><label>Objectif principal<textarea rows={3} maxLength={800} value={editGoal} onChange={event=>setEditGoal(event.target.value)}/></label><div className="factory-detail-head-actions"><button type="button" className="button button-primary" disabled={saving} onClick={()=>void saveProjectDetails()}>{saving?"Enregistrement…":"Enregistrer les modifications"}</button><button type="button" className="button button-secondary" disabled={saving} onClick={()=>setEditing(false)}>Annuler</button></div></div>}
     <div className="factory-summary"><b>Public cible</b><p>{project.target_audience}</p><b>Objectif principal</b><p>{project.goal}</p><b>Positionnement</b><p>{blueprint.positioning??project.description}</p><b>Promesse à vérifier</b><p>{blueprint.promise??"À définir."}</p></div>
     <h3>Structure proposée</h3>
     {(blueprint.sections??[]).map((section,index)=><article className="factory-section" key={section.title}><span>{String(index+1).padStart(2,"0")}</span><div><b>{section.title}</b><p>{section.purpose}</p><ul>{section.actions.map(action=><li key={action}>{action}</li>)}</ul></div></article>)}
