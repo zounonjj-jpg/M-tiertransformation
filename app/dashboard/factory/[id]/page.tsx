@@ -91,7 +91,7 @@ export default function FactoryProjectPage(){
    "---",
    "Document préparé avec NEXBIZ AI. Vérifiez les informations et validez votre marché avant publication."
   ];
-  const blob=new Blob([lines.join("\\n")],{type:"text/markdown;charset=utf-8"});
+  const blob=new Blob([lines.join("\n")],{type:"text/markdown;charset=utf-8"});
   const url=URL.createObjectURL(blob);
   const link=document.createElement("a");
   link.href=url;
