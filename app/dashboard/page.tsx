@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
@@ -19,15 +19,6 @@ const starters = [
 function titleFrom(text: string) {
   const clean = text.trim().replace(/\s+/g, " ");
   return clean.length > 52 ? clean.slice(0, 49) + "…" : clean || "Nouveau projet";
-}
-
-function firstResponse(message: string) {
-  const value = message.toLowerCase();
-  const kind = /site|web|application|app|logiciel|plateforme/.test(value) ? "solution numérique" :
-    /ebook|e-book|livre|formation|cours|pdf|guide/.test(value) ? "produit de connaissance" :
-    /client|vendre|vente|revenu|argent|business|commerce/.test(value) ? "activité commerciale" :
-    "projet de transformation métier";
-  return `J'ai bien reçu votre demande. Elle semble concerner un(e) ${kind}.\n\nPour éviter de vous proposer une idée générique, nous allons construire votre solution à partir de votre situation réelle.\n\n**Première précision :** quel résultat concret voulez-vous obtenir en priorité, et pour qui ? Décrivez le client ou l'utilisateur que vous souhaitez aider.\n\nEnsuite, nous examinerons les besoins réels, les solutions possibles, les coûts, les étapes de validation et un scénario de revenus prudent. Aucun revenu ne peut être garanti : les estimations devront être testées sur le marché.`;
 }
 
 function DashboardContent() {
@@ -131,14 +122,28 @@ function DashboardContent() {
       .select("id,role,content,created_at").single();
     if (userError || !userMessage) { setError(userError?.message ?? "Message non enregistré."); setSending(false); return; }
     setMessages(current => [...current, userMessage as Message]); setDraft("");
-    if (messages.length === 0) {
-      const reply = firstResponse(content);
-      const { data: assistantMessage, error: assistantError } = await supabase.from("chat_messages")
-        .insert({ project_id: project.id, user_id: userId, role: "assistant", content: reply })
-        .select("id,role,content,created_at").single();
-      if (!assistantError && assistantMessage) setMessages(current => [...current, assistantMessage as Message]);
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+    if (!accessToken) {
+      setError("Votre session a expiré. Reconnectez-vous pour continuer.");
+      setSending(false);
+      return;
     }
-    await supabase.from("chat_projects").update({ updated_at: new Date().toISOString() }).eq("id", project.id).eq("user_id", userId);
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({ projectId: project.id }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        setError(result.error || "Le moteur NEXBIZ AI n'a pas pu répondre.");
+      } else if (result.message) {
+        setMessages(current => [...current, result.message as Message]);
+      }
+    } catch {
+      setError("Connexion au moteur NEXBIZ AI impossible. Votre message reste enregistré ; vous pouvez réessayer.");
+    }
     await loadProjects(userId);
     setSending(false);
   }
