@@ -98,6 +98,62 @@ export default function FactoryProjectPage(){
   link.download=`${project.title.trim().replace(/[^a-z0-9-_]+/gi,"-").toLowerCase()||"projet"}-nexbiz.md`;
   document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);
  }
+
+ function downloadText(filename:string,content:string,mime:string){
+  const blob=new Blob([content],{type:mime});
+  const url=URL.createObjectURL(blob);
+  const link=document.createElement("a");
+  link.href=url;link.download=filename;document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);
+ }
+ function exportEbookDraft(){
+  if(!project)return;
+  const sections=blueprint.sections??[];
+  const lines=[
+   `# ${project.title}`,
+   "**Premier brouillon éditorial — à personnaliser et vérifier avant commercialisation**",
+   "",
+   "## À qui s'adresse ce guide ?",
+   project.target_audience,
+   "",
+   "## Résultat visé",
+   project.goal,
+   "",
+   "## Introduction",
+   `Bienvenue dans « ${project.title} ». Ce guide s'adresse à ${project.target_audience}. Son objectif est de vous aider à avancer sur le sujet suivant : ${project.goal}. Adaptez cette introduction à votre expérience, à votre méthode et aux besoins réellement observés chez vos lecteurs.`,
+   "",
+   ...sections.flatMap((section,index)=>[
+    `## Chapitre ${index+1} — ${section.title}`,
+    section.purpose,
+    "",
+    "### À développer",
+    ...(section.actions??[]).map(action=>`- ${action}`),
+    "",
+    "### Exemple concret à ajouter",
+    "[Ajoutez ici une situation réelle, un exemple original ou une démonstration issue de votre expérience.]",
+    "",
+    "### Exercice du lecteur",
+    "[Proposez une action simple que le lecteur peut réaliser après ce chapitre.]",
+    ""
+   ]),
+   "## Conclusion et plan d'action",
+   `Vous avez parcouru les étapes proposées pour avancer sur : ${project.goal}. Choisissez une première action réalisable, fixez une date et évaluez le résultat. Complétez cette conclusion avec vos conseils personnels et les prochaines ressources utiles.`,
+   "",
+   "## À propos de l'auteur",
+   "[Présentez votre parcours, votre expérience vérifiable et vos coordonnées professionnelles.]",
+   "",
+   "---",
+   "Document de travail préparé par NEXBIZ AI. Ce brouillon n'est pas un livre final : vérifiez les faits, ajoutez votre expertise, vos exemples originaux et relisez le contenu avant toute vente."
+  ];
+  downloadText(`${project.title.replace(/[^a-z0-9-_]+/gi,"-").toLowerCase()||"ebook"}-brouillon-nexbiz.md`,lines.join("\n"),"text/markdown;charset=utf-8");
+ }
+ function exportWebsiteStarter(){
+  if(!project)return;
+  const esc=(value:string)=>value.replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]??char));
+  const title=esc(project.title),audience=esc(project.target_audience),goal=esc(project.goal);
+  const sections=(blueprint.sections??[]).map(section=>`<section><h2>${esc(section.title)}</h2><p>${esc(section.purpose)}</p><ul>${(section.actions??[]).map(action=>`<li>${esc(action)}</li>`).join("")}</ul></section>`).join("\n");
+  const html=`<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="${goal}"><title>${title}</title><style>*{box-sizing:border-box}body{margin:0;font:16px/1.7 system-ui,sans-serif;color:#17251d;background:#f6f8f3}header,main,footer{width:min(960px,calc(100% - 36px));margin:auto}header{padding:28px 0;display:flex;justify-content:space-between;gap:16px;align-items:center}header strong{font-size:20px}.hero{padding:76px 0 64px}.eyebrow{color:#5c8d39;font-weight:700;letter-spacing:2px;text-transform:uppercase;font-size:12px}h1{font-size:clamp(38px,7vw,64px);line-height:1.08;letter-spacing:-2px;max-width:760px;margin:14px 0}p{color:#617067}.cta{display:inline-block;background:#142d21;color:white;padding:13px 20px;border-radius:7px;text-decoration:none;font-weight:700;margin-top:12px}section{background:white;border:1px solid #e4eae1;border-radius:12px;padding:26px;margin:18px 0}h2{margin-top:0}footer{padding:30px 0;color:#7a867d;font-size:13px}@media(max-width:600px){.hero{padding:50px 0 35px}section{padding:20px}}</style></head><body><header><strong>${title}</strong><a class="cta" href="mailto:contact@example.com">Nous contacter</a></header><main><div class="hero"><div class="eyebrow">Une solution pour ${audience}</div><h1>${title}</h1><p>${goal}</p><a class="cta" href="mailto:contact@example.com">Parlons de votre besoin</a></div>${sections}</main><footer>© <span id="year"></span> ${title} · Remplacez les coordonnées de démonstration avant publication.</footer><script>document.getElementById('year').textContent=new Date().getFullYear()</script></body></html>`;
+  downloadText(`${project.title.replace(/[^a-z0-9-_]+/gi,"-").toLowerCase()||"site"}-starter.html`,html,"text/html;charset=utf-8");
+ }
  async function removeProject(){
   if(!supabase||!project)return;
   if(!window.confirm("Supprimer définitivement ce dossier de projet ?"))return;
@@ -123,7 +179,7 @@ export default function FactoryProjectPage(){
     <h3>Plan de lancement</h3><ol className="factory-steps">{(blueprint.launch_steps??[]).map(step=><li key={step}>{step}</li>)}</ol>
     <h3>Checklist avant lancement</h3><ul className="factory-checklist">{(blueprint.checklist??[]).map(item=><li key={item}>{item}</li>)}</ul>
     {error&&<p className="form-alert error">{error}</p>}{notice&&<p className="form-alert success">{notice}</p>}
-    <div className="factory-detail-actions"><button type="button" className="button button-secondary" onClick={exportProject}>Télécharger le cahier (.md)</button><label>État du projet<select value={project.status} disabled={saving} onChange={event=>void changeStatus(event.target.value as Project["status"])}><option value="draft">Brouillon</option><option value="in_progress">En cours</option><option value="completed">Terminé</option><option value="archived">Archivé</option></select></label><button className="offer-delete" disabled={saving} onClick={()=>void removeProject()}>{saving?"Traitement…":"Supprimer le dossier"}</button></div>
+    <div className="factory-detail-actions">{project.project_type==="ebook"&&<button type="button" className="button button-primary" onClick={exportEbookDraft}>Télécharger le brouillon e-book (.md)</button>}{project.project_type==="website"&&<button type="button" className="button button-primary" onClick={exportWebsiteStarter}>Télécharger le starter du site (.html)</button>}<button type="button" className="button button-secondary" onClick={exportProject}>Télécharger le cahier (.md)</button><label>État du projet<select value={project.status} disabled={saving} onChange={event=>void changeStatus(event.target.value as Project["status"])}><option value="draft">Brouillon</option><option value="in_progress">En cours</option><option value="completed">Terminé</option><option value="archived">Archivé</option></select></label><button className="offer-delete" disabled={saving} onClick={()=>void removeProject()}>{saving?"Traitement…":"Supprimer le dossier"}</button></div>
     <p className="offer-note">Ce cahier est une base de travail. Il ne remplace pas la validation du marché et ne constitue pas encore un produit numérique publié.</p>
    </section>
   </section>
