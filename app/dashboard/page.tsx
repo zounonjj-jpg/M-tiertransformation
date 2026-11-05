@@ -1,95 +1,207 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
-type Business = { profession: string; skills: string[]; experience: string | null; target_audience: string | null; main_goal: string | null; business_stage: string | null };
-type Profile = { full_name: string | null; role: string; country: string | null };
+type Project = { id: string; title: string; objective: string; status: string; updated_at: string };
+type Message = { id: string; role: "user" | "assistant" | "system"; content: string; created_at: string };
+type Profile = { full_name: string | null; onboarding_source: string | null; onboarding_reason: string | null; onboarding_completed_at: string | null };
 
-export default function DashboardPage() {
+const starters = [
+  "Je veux transformer mon métier en une source de revenus en ligne.",
+  "J'ai une idée de projet et je veux savoir comment la rendre rentable.",
+  "Je veux créer un site web ou une application pour développer mon activité.",
+  "Je veux transformer mes connaissances en e-book ou formation à vendre."
+];
+
+function titleFrom(text: string) {
+  const clean = text.trim().replace(/\s+/g, " ");
+  return clean.length > 52 ? clean.slice(0, 49) + "…" : clean || "Nouveau projet";
+}
+
+function firstResponse(message: string) {
+  const value = message.toLowerCase();
+  const kind = /site|web|application|app|logiciel|plateforme/.test(value) ? "solution numérique" :
+    /ebook|e-book|livre|formation|cours|pdf|guide/.test(value) ? "produit de connaissance" :
+    /client|vendre|vente|revenu|argent|business|commerce/.test(value) ? "activité commerciale" :
+    "projet de transformation métier";
+  return `J'ai bien reçu votre demande. Elle semble concerner un(e) ${kind}.\n\nPour éviter de vous proposer une idée générique, nous allons construire votre solution à partir de votre situation réelle.\n\n**Première précision :** quel résultat concret voulez-vous obtenir en priorité, et pour qui ? Décrivez le client ou l'utilisateur que vous souhaitez aider.\n\nEnsuite, nous examinerons les besoins réels, les solutions possibles, les coûts, les étapes de validation et un scénario de revenus prudent. Aucun revenu ne peut être garanti : les estimations devront être testées sur le marché.`;
+}
+
+function DashboardContent() {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
+  const search = useSearchParams();
+  const [userId, setUserId] = useState("");
   const [email, setEmail] = useState("");
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [business, setBusiness] = useState<Business | null>(null);
-  const [profession, setProfession] = useState("");
-  const [skills, setSkills] = useState("");
-  const [experience, setExperience] = useState("Débutant");
-  const [audience, setAudience] = useState("");
-  const [goal, setGoal] = useState("Gagner mes premiers clients");
-  const [stage, setStage] = useState("Je démarre");
-  const [saving, setSaving] = useState(false);
-  const [notice, setNotice] = useState("");
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [active, setActive] = useState<Project | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [draft, setDraft] = useState("");
+  const [newTitle, setNewTitle] = useState("");
+  const [newObjective, setNewObjective] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
+  const [source, setSource] = useState("");
+  const [reason, setReason] = useState("");
+  const [mobileProjectsOpen, setMobileProjectsOpen] = useState(false);
+
+  const loadProjects = useCallback(async (uid: string) => {
+    if (!supabase) return;
+    const { data, error: loadError } = await supabase.from("chat_projects")
+      .select("id,title,objective,status,updated_at").eq("user_id", uid)
+      .neq("status", "archived").order("updated_at", { ascending: false });
+    if (loadError) { setError(loadError.message); return; }
+    const rows = (data ?? []) as Project[];
+    setProjects(rows);
+    const requested = search.get("project");
+    const selected = rows.find(p => p.id === requested) ?? active && rows.find(p => p.id === active.id) ?? rows[0] ?? null;
+    setActive(selected);
+  }, [search, active]);
+
+  const loadMessages = useCallback(async (projectId: string) => {
+    if (!supabase) return;
+    const { data, error: loadError } = await supabase.from("chat_messages")
+      .select("id,role,content,created_at").eq("project_id", projectId)
+      .order("created_at", { ascending: true });
+    if (loadError) { setError(loadError.message); return; }
+    setMessages((data ?? []) as Message[]);
+  }, []);
 
   useEffect(() => {
     let alive = true;
-    async function load() {
+    async function init() {
       if (!supabase) { router.replace("/auth"); return; }
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.replace("/auth"); return; }
       if (!alive) return;
-      setEmail(user.email ?? "");
-      const [{ data: p }, { data: b }] = await Promise.all([
-        supabase.from("profiles").select("full_name,role,country").eq("id", user.id).maybeSingle(),
-        supabase.from("business_profiles").select("profession,skills,experience,target_audience,main_goal,business_stage").eq("user_id", user.id).maybeSingle(),
-      ]);
+      setUserId(user.id); setEmail(user.email ?? "");
+      const { data: p } = await supabase.from("profiles")
+        .select("full_name,onboarding_source,onboarding_reason,onboarding_completed_at")
+        .eq("id", user.id).maybeSingle();
       if (!alive) return;
       setProfile(p as Profile | null);
-      if (b) {
-        const row = b as Business;
-        setBusiness(row); setProfession(row.profession); setSkills((row.skills ?? []).join(", "));
-        setExperience(row.experience ?? "Débutant"); setAudience(row.target_audience ?? "");
-        setGoal(row.main_goal ?? "Gagner mes premiers clients"); setStage(row.business_stage ?? "Je démarre");
-      }
+      if (!p?.onboarding_completed_at) setOnboardingOpen(true);
+      await loadProjects(user.id);
       setLoading(false);
     }
-    load();
+    void init();
     return () => { alive = false; };
-  }, [router]);
+  }, [router, loadProjects]);
 
-  async function save(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault(); setError(""); setNotice("");
-    if (!supabase) return;
-    setSaving(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setSaving(false); router.replace("/auth"); return; }
-    const payload = {
-      user_id: user.id, profession: profession.trim(),
-      skills: skills.split(",").map(s=>s.trim()).filter(Boolean),
-      experience, target_audience: audience.trim(), main_goal: goal, business_stage: stage,
-      updated_at: new Date().toISOString(),
-    };
-    const { error: saveError } = await supabase.from("business_profiles").upsert(payload, { onConflict: "user_id" });
-    if (saveError) setError(saveError.message);
-    else { setBusiness(payload); setNotice("Votre profil métier a bien été enregistré. Votre espace est prêt pour la prochaine étape."); }
-    setSaving(false);
+  useEffect(() => { if (active?.id) void loadMessages(active.id); else setMessages([]); }, [active?.id, loadMessages]);
+
+  async function createProject(event?: FormEvent) {
+    event?.preventDefault();
+    if (!supabase || !userId) return;
+    const title = newTitle.trim() || titleFrom(newObjective);
+    if (!newObjective.trim()) { setError("Décrivez en une phrase ce que vous voulez accomplir."); return; }
+    setCreating(true); setError("");
+    const { data, error: createError } = await supabase.from("chat_projects")
+      .insert({ user_id: userId, title, objective: newObjective.trim() })
+      .select("id,title,objective,status,updated_at").single();
+    if (createError) setError(createError.message);
+    else {
+      const project = data as Project;
+      setProjects(current => [project, ...current]); setActive(project);
+      setNewTitle(""); setNewObjective(""); setMobileProjectsOpen(false);
+      router.replace(`/dashboard?project=${project.id}`);
+    }
+    setCreating(false);
+  }
+
+  async function sendMessage(text = draft) {
+    const content = text.trim();
+    if (!content || !supabase || !userId || sending) return;
+    setError(""); setSending(true);
+    let project = active;
+    if (!project) {
+      const { data, error: createError } = await supabase.from("chat_projects")
+        .insert({ user_id: userId, title: titleFrom(content), objective: content })
+        .select("id,title,objective,status,updated_at").single();
+      if (createError || !data) { setError(createError?.message ?? "Impossible de créer le projet."); setSending(false); return; }
+      project = data as Project; setActive(project); setProjects(current => [project!, ...current]);
+    }
+    const { data: userMessage, error: userError } = await supabase.from("chat_messages")
+      .insert({ project_id: project.id, user_id: userId, role: "user", content })
+      .select("id,role,content,created_at").single();
+    if (userError || !userMessage) { setError(userError?.message ?? "Message non enregistré."); setSending(false); return; }
+    setMessages(current => [...current, userMessage as Message]); setDraft("");
+    if (messages.length === 0) {
+      const reply = firstResponse(content);
+      const { data: assistantMessage, error: assistantError } = await supabase.from("chat_messages")
+        .insert({ project_id: project.id, user_id: userId, role: "assistant", content: reply })
+        .select("id,role,content,created_at").single();
+      if (!assistantError && assistantMessage) setMessages(current => [...current, assistantMessage as Message]);
+    }
+    await supabase.from("chat_projects").update({ updated_at: new Date().toISOString() }).eq("id", project.id).eq("user_id", userId);
+    await loadProjects(userId);
+    setSending(false);
+  }
+
+  async function finishOnboarding(skip = false) {
+    if (!supabase || !userId) return;
+    const update = { onboarding_source: skip ? null : source || null, onboarding_reason: skip ? null : reason || null, onboarding_completed_at: new Date().toISOString() };
+    const { error: saveError } = await supabase.from("profiles").update(update).eq("id", userId);
+    if (saveError) { setError(saveError.message); return; }
+    setProfile(current => current ? { ...current, ...update } : current); setOnboardingOpen(false);
   }
 
   async function signOut() { await supabase?.auth.signOut(); router.push("/"); }
 
-  if (loading) return <main className="dashboard-loading">Préparation de votre espace NEXBIZ AI…</main>;
-  const name = profile?.full_name?.split(" ")[0] || email.split("@")[0] || "Entrepreneur";
-  return <main className="workspace">
-    <aside className="sidebar"><Link className="brand" href="/"><span className="brand-mark">N</span><span>NEXBIZ<span className="brand-ai"> AI</span></span></Link><div className="side-label">VOTRE ESPACE</div><a className="side-link selected" href="#overview">⌂ <span>Vue d'ensemble</span></a><a className="side-link" href="#profil">✳ <span>Mon profil métier</span></a><Link className="side-link" href="/dashboard/analyse">⌕ <span>Mon diagnostic</span></Link><Link className="side-link" href="/dashboard/offres">◇ <span>Mes offres</span></Link><Link className="side-link" href="/dashboard/clients">◎ <span>Prospects & clients</span></Link><Link className="side-link" href="/dashboard/factory">✧ <span>Digital Factory</span></Link><div className="sidebar-bottom"><div className="user-mini"><div className="user-avatar">{name.slice(0,1).toUpperCase()}</div><div><b>{name}</b><small>{email}</small></div></div><button onClick={signOut} className="logout">Déconnexion ↗</button></div></aside>
-    <section className="workspace-main" id="overview">
-      <div className="workspace-top"><div><span className="eyebrow dark">VOTRE CENTRE DE PILOTAGE</span><h1>Bonjour {name} <span>✦</span></h1><p>Chaque grande activité commence par une première étape.</p></div><span className="account-pill">● Espace personnel</span></div>
-      <div className="welcome-panel"><div><span className="welcome-kicker">VOTRE PARCOURS NEXBIZ</span><h2>Transformez votre savoir-faire<br/>en une activité qui vous ressemble.</h2><p>Complétez votre profil métier pour préparer une analyse adaptée à votre expérience et à vos ambitions.</p><a href="#profil" className="welcome-action">Compléter mon profil <b>→</b></a></div><div className="welcome-symbol">N<span>✳</span></div></div>
-      <div className="workspace-stats"><article><small>PROFIL MÉTIER</small><b>{business ? "Enregistré" : "À compléter"}</b><span>{business ? "Vos informations sont sauvegardées" : "Votre première étape"}</span></article><article><small>PROCHAINE ÉTAPE</small><b>Diagnostic business</b><span><Link href="/dashboard/analyse">Construire ma stratégie →</Link></span></article><article><small>VOTRE FORMULE</small><b>Découverte</b><span>Accès initial</span></article></div>
-      <section className="profile-panel" id="profil"><div className="panel-heading"><div><span className="eyebrow dark">ÉTAPE 01 · APPRENDRE À VOUS CONNAÎTRE</span><h2>Votre profil métier</h2><p>Parlez-nous de ce que vous savez faire. Vous pourrez modifier ces informations plus tard.</p></div><span className="step-count">01 / 04</span></div>
-        <form className="business-form" onSubmit={save}>
-          <label>Quel est votre métier ou votre activité ?<input value={profession} onChange={e=>setProfession(e.target.value)} placeholder="Ex. : couturier, enseignant, développeur, commerçant…" required/></label>
-          <label>Quelles sont vos compétences ?<textarea value={skills} onChange={e=>setSkills(e.target.value)} placeholder="Séparez vos compétences par des virgules. Ex. : couture, vente, design…" rows={3}/><small>Plusieurs compétences ? Séparez-les par des virgules.</small></label>
-          <div className="form-two"><label>Votre expérience<select value={experience} onChange={e=>setExperience(e.target.value)}><option>Débutant</option><option>Moins de 2 ans</option><option>2 à 5 ans</option><option>Plus de 5 ans</option><option>Expert</option></select></label><label>Où en êtes-vous ?<select value={stage} onChange={e=>setStage(e.target.value)}><option>Je démarre</option><option>J'ai une activité mais peu de clients</option><option>J'ai déjà des clients</option><option>Je veux développer mon activité</option></select></label></div>
-          <label>À qui souhaitez-vous proposer vos services ou produits ?<input value={audience} onChange={e=>setAudience(e.target.value)} placeholder="Ex. : particuliers, entreprises, étudiants…"/></label>
-          <label>Votre objectif prioritaire<select value={goal} onChange={e=>setGoal(e.target.value)}><option>Gagner mes premiers clients</option><option>Créer une nouvelle source de revenus</option><option>Vendre mes produits ou services en ligne</option><option>Développer mon activité existante</option><option>Créer une entreprise</option></select></label>
-          {error && <p className="form-alert error">{error}</p>}{notice && <p className="form-alert success">{notice}</p>}
-          <button className="button button-primary" disabled={saving}>{saving ? "Enregistrement…" : "Enregistrer mon profil →"}</button>
-        </form>
-      </section>
-      <p className="workspace-footer">NEXBIZ AI · Vos compétences sont votre point de départ.</p>
+  if (loading) return <main className="chat-loading">Ouverture de votre espace NEXBIZ AI…</main>;
+  const name = profile?.full_name?.split(" ")[0] || email.split("@")[0] || "Bienvenue";
+  const activeTitle = active?.title ?? "Nouvelle conversation";
+
+  return <main className="nex-chat-shell">
+    <aside className={`chat-sidebar ${mobileProjectsOpen ? "mobile-open" : ""}`}>
+      <div className="chat-brand-row"><Link className="brand" href="/"><span className="brand-mark">N</span><span>NEXBIZ<span className="brand-ai"> AI</span></span></Link><button className="mobile-close" onClick={() => setMobileProjectsOpen(false)} aria-label="Fermer">×</button></div>
+      <button className="new-chat-button" onClick={() => { setActive(null); setMessages([]); setMobileProjectsOpen(false); router.replace("/dashboard"); }}>＋ Nouveau projet</button>
+      <div className="chat-project-label">VOS PROJETS</div>
+      <div className="chat-project-list">
+        {projects.length === 0 ? <p className="chat-project-empty">Vos conversations et projets apparaîtront ici.</p> :
+          projects.map(project => <button key={project.id} className={`chat-project-item ${active?.id === project.id ? "active" : ""}`} onClick={() => { setActive(project); setMobileProjectsOpen(false); router.replace(`/dashboard?project=${project.id}`); }}><span>◌</span><span>{project.title}</span></button>)}
+      </div>
+      <div className="chat-sidebar-bottom"><Link href="/dashboard/factory">Bibliothèque de contenus ↗</Link><div className="chat-user"><span className="chat-avatar">{name.slice(0,1).toUpperCase()}</span><span><b>{name}</b><small>{email}</small></span></div><button className="chat-logout" onClick={signOut}>Déconnexion</button></div>
+    </aside>
+
+    <section className="chat-main">
+      <header className="chat-topbar"><button className="mobile-menu" onClick={() => setMobileProjectsOpen(true)} aria-label="Ouvrir les projets">☰</button><div><span className="chat-top-eyebrow">ESPACE DE TRANSFORMATION</span><b>{activeTitle}</b></div><span className="chat-plan">Découverte</span></header>
+      <div className="chat-scroll">
+        {!active && messages.length === 0 ? <div className="chat-welcome">
+          <span className="chat-welcome-mark">✳</span><p className="chat-top-eyebrow">NEXBIZ AI · FROM SKILLS TO BUSINESS</p>
+          <h1>Bonjour {name}.<br/><em>Que voulez-vous transformer aujourd'hui ?</em></h1>
+          <p className="chat-welcome-copy">Expliquez votre métier, votre idée ou votre difficulté. Nous allons partir de votre demande, pas d'un profil obligatoire.</p>
+          <form className="chat-compose chat-first-compose" onSubmit={e => { e.preventDefault(); void sendMessage(); }}>
+            <textarea value={draft} onChange={e=>setDraft(e.target.value)} placeholder="Ex. : Je suis menuisier et je veux trouver des clients grâce au numérique…" rows={3}/>
+            <div className="chat-compose-bottom"><span>Décrivez librement votre besoin</span><button disabled={!draft.trim() || sending}>Envoyer ↑</button></div>
+          </form>
+          <div className="chat-starters">{starters.map(item=><button key={item} onClick={()=>void sendMessage(item)}>{item}<span>↗</span></button>)}</div>
+        </div> : <>
+          <div className="chat-conversation">
+            <div className="chat-conversation-heading"><span className="chat-top-eyebrow">PROJET EN COURS</span><h2>{activeTitle}</h2><p>{active?.objective}</p></div>
+            {messages.map(message=><article key={message.id} className={`chat-message ${message.role}`}><span className="chat-message-avatar">{message.role === "user" ? "VOUS" : "N"}</span><div className="chat-message-content"><b>{message.role === "user" ? "Vous" : "NEXBIZ AI"}</b><p>{message.content}</p></div></article>)}
+            {sending && <div className="chat-thinking">Préparation de votre réponse…</div>}
+          </div>
+        </>}
+        {error && <p className="chat-error">{error}</p>}
+      </div>
+      {(active || messages.length > 0) && <form className="chat-compose chat-bottom-compose" onSubmit={e=>{e.preventDefault();void sendMessage();}}>
+        <textarea value={draft} onChange={e=>setDraft(e.target.value)} placeholder="Continuez votre projet ici…" rows={2}/>
+        <div className="chat-compose-bottom"><span>Une conversation distincte par projet</span><button disabled={!draft.trim() || sending}>Envoyer ↑</button></div>
+      </form>}
+      <footer className="chat-disclaimer">NEXBIZ AI doit valider les hypothèses avant de présenter une estimation de revenus. Aucun résultat financier n'est garanti.</footer>
     </section>
+
+    {onboardingOpen && <div className="onboarding-overlay"><section className="onboarding-card"><button className="onboarding-close" onClick={()=>void finishOnboarding(true)} aria-label="Fermer">×</button><span className="chat-top-eyebrow">UNE PETITE QUESTION · FACULTATIF</span><h2>Comment avez-vous connu NEXBIZ AI ?</h2><select value={source} onChange={e=>setSource(e.target.value)}><option value="">Choisir une réponse (facultatif)</option><option>Réseaux sociaux</option><option>Un ami ou un proche</option><option>Recherche Google</option><option>Vidéo ou publicité</option><option>Autre</option></select><h2>Pourquoi souhaitez-vous utiliser NEXBIZ AI ?</h2><select value={reason} onChange={e=>setReason(e.target.value)}><option value="">Choisir une réponse (facultatif)</option><option>Créer une activité ou un revenu en ligne</option><option>Développer mon activité actuelle</option><option>Créer un produit numérique</option><option>Créer un site web ou une application</option><option>Résoudre un problème professionnel</option><option>Explorer une idée</option></select><button className="button button-primary onboarding-submit" onClick={()=>void finishOnboarding(false)}>Continuer vers mon chat →</button><button className="onboarding-skip" onClick={()=>void finishOnboarding(true)}>Passer cette étape</button></section></div>}
   </main>;
+}
+
+export default function DashboardPage() {
+  return <DashboardContent />;
 }
