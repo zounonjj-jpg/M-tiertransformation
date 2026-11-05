@@ -60,7 +60,7 @@ function DashboardContent() {
     const rows = (data ?? []) as Project[];
     setProjects(rows);
     const requested = search.get("project");
-    const selected = rows.find(p => p.id === requested) ?? active && rows.find(p => p.id === active.id) ?? rows[0] ?? null;
+    const selected = rows.find(p => p.id === requested) ?? rows[0] ?? null;
     setActive(selected);
   }, [search, active]);
 
