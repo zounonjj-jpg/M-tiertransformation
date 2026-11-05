@@ -312,7 +312,7 @@ export default function FactoryProjectPage(){
    const url=URL.createObjectURL(blob);const link=document.createElement("a");link.href=url;link.download=`${safe}-contenu.md`;document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);return;
   }
   const escapeHtml=(value:string)=>value.replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]??char));
-  const htmlBody=draftBody.split("\\n").map(line=>{
+  const htmlBody=draftBody.split("\n").map(line=>{
    const value=escapeHtml(line.trim());
    if(!value)return "";
    if(value.startsWith("### "))return `<h3>${value.slice(4)}</h3>`;
@@ -322,7 +322,7 @@ export default function FactoryProjectPage(){
    if(/^\\d+\\. /.test(value))return `<p>${value}</p>`;
    if(value.startsWith("> "))return `<blockquote>${value.slice(2)}</blockquote>`;
    return `<p>${value.replace(/\\*\\*(.*?)\\*\\*/g,"<strong>$1</strong>")}</p>`;
-  }).join("\\n");
+  }).join("\n");
   const html=`<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(project.title)}</title><style>body{margin:0;background:#f5f7f2;color:#17251d;font:16px/1.8 Georgia,serif}.document{max-width:820px;margin:36px auto;padding:clamp(24px,6vw,64px);background:#fff;box-shadow:0 10px 40px #17251d12}h1,h2,h3{font-family:system-ui,sans-serif;line-height:1.25;color:#173b2b}h1{font-size:2.4rem}h2{margin-top:2.2em;border-bottom:1px solid #e5ece2;padding-bottom:.4em}blockquote{border-left:4px solid #a8d96b;padding:8px 18px;background:#f6faef;color:#53634f}footer{margin-top:48px;border-top:1px solid #e5ece2;padding-top:18px;color:#778278;font:12px system-ui}</style></head><body><main class="document">${htmlBody}<footer>Document de travail créé avec NEXBIZ AI · Vérifiez et personnalisez le contenu avant diffusion.</footer></main></body></html>`;
   const blob=new Blob([html],{type:"text/html;charset=utf-8"});const url=URL.createObjectURL(blob);const link=document.createElement("a");link.href=url;link.download=`${safe}-document.html`;document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);
  }
