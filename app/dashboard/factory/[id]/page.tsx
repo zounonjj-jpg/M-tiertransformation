@@ -289,6 +289,7 @@ export default function FactoryProjectPage(){
 
  function createContentDraft(){
   if(!project)return;
+  if(draftBody.trim()&&!window.confirm("Recréer le brouillon remplacera le texte actuellement dans l’éditeur. Continuer ?"))return;
   setDraftBody(buildContentDraft(project));
   setContentNotice("Un premier contenu a été préparé. Personnalisez-le avant de le publier ou de le vendre.");
   setContentError("");
