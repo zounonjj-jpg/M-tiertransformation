@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 type Project = { id: string; title: string; objective: string; status: string; updated_at: string };
@@ -32,7 +32,6 @@ function firstResponse(message: string) {
 
 function DashboardContent() {
   const router = useRouter();
-  const search = useSearchParams();
   const [userId, setUserId] = useState("");
   const [email, setEmail] = useState("");
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -59,10 +58,10 @@ function DashboardContent() {
     if (loadError) { setError(loadError.message); return; }
     const rows = (data ?? []) as Project[];
     setProjects(rows);
-    const requested = search.get("project");
+    const requested = new URLSearchParams(window.location.search).get("project");
     const selected = rows.find(p => p.id === requested) ?? rows[0] ?? null;
     setActive(selected);
-  }, [search, active]);
+  }, []);
 
   const loadMessages = useCallback(async (projectId: string) => {
     if (!supabase) return;
