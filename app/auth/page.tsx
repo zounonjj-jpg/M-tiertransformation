@@ -24,6 +24,7 @@ function AuthContent() {
   const [fullName, setFullName] = useState("");
   const [country, setCountry] = useState("");
   const [role, setRole] = useState("entrepreneur");
+  const [customProfession, setCustomProfession] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -42,7 +43,7 @@ function AuthContent() {
       if (mode === "signup") {
         const { data, error: authError } = await supabase.auth.signUp({
           email, password,
-          options: { data: { full_name: fullName, role, country } },
+          options: { data: { full_name: fullName, role, country, custom_profession: role === "other" ? customProfession.trim() : "" } },
         });
         if (authError) throw authError;
         if (data.session) router.push("/dashboard");
@@ -69,6 +70,7 @@ function AuthContent() {
         {mode === "signup" && <>
           <label>Nom complet<input value={fullName} onChange={e=>setFullName(e.target.value)} placeholder="Votre nom et prénom" required autoComplete="name"/></label>
           <label>Je suis<select value={role} onChange={e=>setRole(e.target.value)}>{roles.map(([v,l])=><option value={v} key={v}>{l}</option>)}</select></label>
+          {role === "other" && <label>Quel est votre métier ou votre activité ?<input value={customProfession} onChange={e=>setCustomProfession(e.target.value)} placeholder="Ex. : médecin, maçon, infirmier…" required maxLength={120}/></label>}
           <label>Pays<input value={country} onChange={e=>setCountry(e.target.value)} placeholder="Votre pays" autoComplete="country-name"/></label>
         </>}
         <label>Adresse e-mail<input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="vous@exemple.com" required autoComplete="email"/></label>
