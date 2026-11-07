@@ -4,7 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
-const MODEL = process.env.AI_GATEWAY_MODEL || "google/gemini-2.5-flash-lite";
+const MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash-lite";
 
 const SYSTEM_PROMPT = `Tu es NEXBIZ AI, un conseiller stratégique et opérationnel spécialisé dans la transformation des métiers, compétences, idées et activités en solutions numériques et sources de revenus réalistes.
 
@@ -49,6 +49,12 @@ export async function POST(request: NextRequest) {
     const { data: authData, error: authError } = await supabase.auth.getUser(token);
     if (authError || !authData.user) return NextResponse.json({ error: "Session expirée. Reconnectez-vous." }, { status: 401 });
 
+    const { data: profile, error: profileError } = await supabase.from("profiles")
+      .select("ai_data_consent_at,ai_data_consent_provider").eq("id", authData.user.id).maybeSingle();
+    if (profileError || !profile?.ai_data_consent_at || profile.ai_data_consent_provider !== "google_gemini_free") {
+      return NextResponse.json({ error: "Avant d’utiliser Gemini, veuillez lire et accepter les conditions de traitement des conversations dans votre espace.", code: "AI_DATA_CONSENT_REQUIRED" }, { status: 403 });
+    }
+
     const body = await request.json();
     const projectId = typeof body.projectId === "string" ? body.projectId : "";
     if (!projectId) return NextResponse.json({ error: "Projet manquant." }, { status: 400 });
@@ -65,48 +71,48 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Aucun nouveau message à traiter." }, { status: 400 });
     }
 
-    const apiKey = process.env.AI_GATEWAY_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       return NextResponse.json({
-        error: "Le moteur IA n'est pas encore activé. Le code est prêt, mais une clé AI Gateway doit être configurée avant d'envoyer des requêtes payantes.",
+        error: "Gemini n'est pas encore activé. Ajoutez la clé GEMINI_API_KEY dans les variables d'environnement Vercel.",
         code: "AI_ENGINE_NOT_CONFIGURED",
       }, { status: 503 });
     }
 
-    const messages = [
-      { role: "system", content: SYSTEM_PROMPT + `\n\nPROJET ACTUEL\nTitre : ${project.title}\nObjectif initial : ${project.objective}\n\nHistorique ci-dessous :` },
-      ...history.map((item) => ({ role: item.role as "user" | "assistant", content: item.content })),
-    ];
-
-    const response = await fetch("https://ai-gateway.vercel.sh/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: MODEL,
-        messages,
-        temperature: 0.35,
-        max_tokens: 1600,
-      }),
-      signal: AbortSignal.timeout(25000),
-    });
+    const contents = history.map((item) => ({
+      role: item.role === "assistant" ? "model" : "user",
+      parts: [{ text: item.content }],
+    }));
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: SYSTEM_PROMPT + `\\n\\nPROJET ACTUEL\\nTitre : ${project.title}\\nObjectif initial : ${project.objective}` }] },
+          contents,
+          generationConfig: { temperature: 0.35, maxOutputTokens: 1600 },
+        }),
+        signal: AbortSignal.timeout(25000),
+      }
+    );
 
     if (!response.ok) {
       const detail = await response.text().catch(() => "");
-      console.error("AI Gateway error", response.status, detail.slice(0, 500));
-      const message = response.status === 402
-        ? "Le solde ou le budget IA disponible est insuffisant. Aucune réponse n'a été générée."
-        : response.status === 401 || response.status === 403
-          ? "L'accès au fournisseur IA n'est pas autorisé. Vérifiez la configuration de la clé."
-          : response.status === 429
-            ? "Le service IA est momentanément limité. Réessayez dans un instant."
-            : "Le service IA est momentanément indisponible.";
+      console.error("Gemini API error", response.status, detail.slice(0, 500));
+      const message = response.status === 429
+        ? "La limite gratuite de Gemini est momentanément atteinte. Réessayez plus tard."
+        : response.status === 400 || response.status === 403
+          ? "Gemini a refusé la requête. Vérifiez la clé API et les paramètres du projet Google AI Studio."
+          : "Le service Gemini est momentanément indisponible.";
       return NextResponse.json({ error: message, code: "AI_PROVIDER_ERROR" }, { status: 502 });
     }
 
     const payload = await response.json();
-    const answer = payload?.choices?.[0]?.message?.content;
+    const answer = payload?.candidates?.[0]?.content?.parts
+      ?.map((part: { text?: string }) => part.text || "").join("");
     if (typeof answer !== "string" || !answer.trim()) {
-      return NextResponse.json({ error: "Le moteur IA n'a pas renvoyé de réponse exploitable." }, { status: 502 });
+      return NextResponse.json({ error: "Gemini n'a pas renvoyé de réponse exploitable." }, { status: 502 });
     }
 
     const { data: saved, error: saveError } = await supabase.from("chat_messages")
