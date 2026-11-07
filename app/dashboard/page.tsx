@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabase";
 
 type Project = { id: string; title: string; objective: string; status: string; updated_at: string };
 type Message = { id: string; role: "user" | "assistant" | "system"; content: string; created_at: string };
-type Profile = { full_name: string | null; onboarding_source: string | null; onboarding_reason: string | null; onboarding_completed_at: string | null };
+type Profile = { full_name: string | null; onboarding_source: string | null; onboarding_reason: string | null; onboarding_completed_at: string | null; ai_data_consent_at: string | null; ai_data_consent_provider: string | null };
 
 const starters = [
   "Je veux transformer mon métier en une source de revenus en ligne.",
@@ -39,7 +39,7 @@ function DashboardContent() {
   const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [source, setSource] = useState("");
   const [reason, setReason] = useState("");
-  const [mobileProjectsOpen, setMobileProjectsOpen] = useState(false);
+  const [mobileProjectsOpen, setMobileProjectsOpen] = useState(false);\n  const [consentSaving, setConsentSaving] = useState(false);
 
   const loadProjects = useCallback(async (uid: string) => {
     if (!supabase) return;
@@ -72,11 +72,11 @@ function DashboardContent() {
       if (!alive) return;
       setUserId(user.id); setEmail(user.email ?? "");
       const { data: p } = await supabase.from("profiles")
-        .select("full_name,onboarding_source,onboarding_reason,onboarding_completed_at")
+        .select("full_name,onboarding_source,onboarding_reason,onboarding_completed_at,ai_data_consent_at,ai_data_consent_provider")
         .eq("id", user.id).maybeSingle();
       if (!alive) return;
       setProfile(p as Profile | null);
-      if (!p?.onboarding_completed_at) setOnboardingOpen(true);
+      if (p?.ai_data_consent_at && p?.ai_data_consent_provider === "google_gemini_free" && !p?.onboarding_completed_at) setOnboardingOpen(true);
       await loadProjects(user.id);
       setLoading(false);
     }
@@ -202,7 +202,7 @@ function DashboardContent() {
       <footer className="chat-disclaimer">NEXBIZ AI doit valider les hypothèses avant de présenter une estimation de revenus. Aucun résultat financier n'est garanti.</footer>
     </section>
 
-    {onboardingOpen && <div className="onboarding-overlay"><section className="onboarding-card"><button className="onboarding-close" onClick={()=>void finishOnboarding(true)} aria-label="Fermer">×</button><span className="chat-top-eyebrow">UNE PETITE QUESTION · FACULTATIF</span><h2>Comment avez-vous connu NEXBIZ AI ?</h2><select value={source} onChange={e=>setSource(e.target.value)}><option value="">Choisir une réponse (facultatif)</option><option>Réseaux sociaux</option><option>Un ami ou un proche</option><option>Recherche Google</option><option>Vidéo ou publicité</option><option>Autre</option></select><h2>Pourquoi souhaitez-vous utiliser NEXBIZ AI ?</h2><select value={reason} onChange={e=>setReason(e.target.value)}><option value="">Choisir une réponse (facultatif)</option><option>Créer une activité ou un revenu en ligne</option><option>Développer mon activité actuelle</option><option>Créer un produit numérique</option><option>Créer un site web ou une application</option><option>Résoudre un problème professionnel</option><option>Explorer une idée</option></select><button className="button button-primary onboarding-submit" onClick={()=>void finishOnboarding(false)}>Continuer vers mon chat →</button><button className="onboarding-skip" onClick={()=>void finishOnboarding(true)}>Passer cette étape</button></section></div>}
+    {(!profile?.ai_data_consent_at || profile?.ai_data_consent_provider !== "google_gemini_free") && <div className="onboarding-overlay"><section className="onboarding-card"><span className="chat-top-eyebrow">INFORMATION IMPORTANTE · GEMINI</span><h2>Autoriser l’assistant IA</h2><p>Pour générer vos réponses, NEXBIZ AI transmettra le contenu de vos messages et le contexte de votre projet à Google Gemini. Avec l’offre gratuite de l’API Gemini, Google peut utiliser les données envoyées pour améliorer ses produits. Évitez donc de partager des mots de passe, données bancaires ou informations confidentielles.</p><p>Vous pouvez continuer sans accepter, mais le moteur IA restera désactivé. Ce choix pourra être modifié ultérieurement dans les paramètres de confidentialité.</p><button className="button button-primary onboarding-submit" disabled={consentSaving} onClick={()=>void acceptGeminiConsent()}>{consentSaving ? "Enregistrement…" : "J’accepte et je continue →"}</button><button className="onboarding-skip" onClick={()=>{setError("Le moteur IA restera désactivé tant que vous n’aurez pas accepté le traitement des conversations par Google Gemini.");}}>Refuser pour le moment</button></section></div>}\n    {onboardingOpen && profile?.ai_data_consent_at && <div className="onboarding-overlay"><section className="onboarding-card"><button className="onboarding-close" onClick={()=>void finishOnboarding(true)} aria-label="Fermer">×</button><span className="chat-top-eyebrow">UNE PETITE QUESTION · FACULTATIF</span><h2>Comment avez-vous connu NEXBIZ AI ?</h2><select value={source} onChange={e=>setSource(e.target.value)}><option value="">Choisir une réponse (facultatif)</option><option>Réseaux sociaux</option><option>Un ami ou un proche</option><option>Recherche Google</option><option>Vidéo ou publicité</option><option>Autre</option></select><h2>Pourquoi souhaitez-vous utiliser NEXBIZ AI ?</h2><select value={reason} onChange={e=>setReason(e.target.value)}><option value="">Choisir une réponse (facultatif)</option><option>Créer une activité ou un revenu en ligne</option><option>Développer mon activité actuelle</option><option>Créer un produit numérique</option><option>Créer un site web ou une application</option><option>Résoudre un problème professionnel</option><option>Explorer une idée</option></select><button className="button button-primary onboarding-submit" onClick={()=>void finishOnboarding(false)}>Continuer vers mon chat →</button><button className="onboarding-skip" onClick={()=>void finishOnboarding(true)}>Passer cette étape</button></section></div>}
   </main>;
 }
 
