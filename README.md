@@ -6,7 +6,7 @@ NEXBIZ AI helps people turn a profession, skill, idea or business challenge into
 - Next.js 15 / React 19
 - Supabase Auth and Postgres with owner-scoped Row Level Security
 - Vercel production deployment
-- Optional Vercel AI Gateway for the real conversational strategy engine
+- Google Gemini API for the real conversational strategy engine
 
 ## Local setup
 1. Install dependencies with `npm install`.
@@ -35,11 +35,11 @@ The authenticated server route `POST /api/chat`:
 - Verifies the Supabase user session.
 - Verifies that the requested project belongs to the authenticated user.
 - Loads recent project conversation history.
-- Sends the conversation to the selected AI Gateway model using a business-transformation system prompt.
+- Requires explicit user consent before sending project conversations to Google Gemini.\n- Sends the conversation to the Gemini API using a business-transformation system prompt.
 - Saves the assistant response in the same project.
 - Handles missing credentials, insufficient credits, access failures, rate limits and provider errors without inventing an AI response.
 
-The AI engine is intentionally disabled until `AI_GATEWAY_API_KEY` is configured on the server. This prevents unapproved metered AI usage. No key or provider secret is committed to this repository.
+The AI engine remains disabled until `GEMINI_API_KEY` is configured on the server and the user has accepted the free-tier data-processing notice. The free tier may allow Google to use submitted prompts and responses to improve its products. No key or provider secret is committed to this repository.
 
 ## Quality and revenue standards
 The strategy prompt requires the assistant to distinguish user-provided facts, assumptions, items requiring verification and recommendations. Revenue scenarios must show their arithmetic and assumptions. The assistant must not guarantee income or claim market validation without evidence.
