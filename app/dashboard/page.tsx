@@ -39,7 +39,8 @@ function DashboardContent() {
   const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [source, setSource] = useState("");
   const [reason, setReason] = useState("");
-  const [mobileProjectsOpen, setMobileProjectsOpen] = useState(false);\n  const [consentSaving, setConsentSaving] = useState(false);
+  const [mobileProjectsOpen, setMobileProjectsOpen] = useState(false);
+  const [consentSaving, setConsentSaving] = useState(false);
 
   const loadProjects = useCallback(async (uid: string) => {
     if (!supabase) return;
