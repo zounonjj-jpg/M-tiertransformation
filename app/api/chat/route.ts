@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          systemInstruction: { parts: [{ text: SYSTEM_PROMPT + `\\n\\nPROJET ACTUEL\\nTitre : ${project.title}\\nObjectif initial : ${project.objective}` }] },
+          systemInstruction: { parts: [{ text: SYSTEM_PROMPT + `\n\nPROJET ACTUEL\nTitre : ${project.title}\nObjectif initial : ${project.objective}` }] },
           contents,
           generationConfig: { temperature: 0.35, maxOutputTokens: 1600 },
         }),
